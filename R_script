@@ -1,0 +1,38 @@
+library(tidyverse)
+# combine feature.table and taxonomy from QIIME2
+tax_fea_sb <- left_join(feature.table.sb, taxonomy.sb)
+View(tax_fea_sb)
+
+# check if any internal standards have been categorized into more than one ASVs. In this cae, std1 has 2 ASVs, so these two should be combined
+tax_fea_sb_q <- tax_fea_sb
+tax_fea_sb_q[1, 2:6] <- tax_fea_sb_q[1, 2:6] + tax_fea_sb_q[6, 2:6]
+tax_fea_sb_q <- tax_fea_sb_q[-6, ] # remove the extra ASV of std1
+
+# export the internal standard sub-dataset to calculate the equation: perform using OFFICE software or in-house functions on R
+write.csv(tax_fea_sb_q[1:5, ], "tax_fea_sb_q15.csv")
+
+# use the equations to calculate the absolute abundance
+View(tax_fea_sb_q)
+tax_fea_sb_q$BR0041 <- tax_fea_sb_q$BR0041.SOC_S1*2.3569-2020.4
+tax_fea_sb_q$BR0045 <- tax_fea_sb_q$BR0045.SOC_S2*2.3467-1315.0
+tax_fea_sb_q$BR0046 <- tax_fea_sb_q$BR0046.SOC_S3*1.7286-1523.1
+tax_fea_sb_q$BR0047 <- tax_fea_sb_q$BR0047.SOC_S4*1.5678-1273.3
+tax_fea_sb_q$BR0048 <- tax_fea_sb_q$BR0048.SOC_S5*2.0371-1247.9
+
+# adjust the absolute abundance using 1rst PCR sample volume data
+sample_1stPCR$sam_ratio <- sample_1stPCR$`④土壌1gあたりのDNA抽出量`/sample_1stPCR$`②1st PCR sample量 (ng)`
+tax_fea_sb_q$BR0041 <- tax_fea_sb_q$BR0041*sample_1stPCR[[1, 6]]
+tax_fea_sb_q$BR0045 <- tax_fea_sb_q$BR0045*sample_1stPCR[[2, 6]]
+tax_fea_sb_q$BR0046 <- tax_fea_sb_q$BR0046*sample_1stPCR[[3, 6]]
+tax_fea_sb_q$BR0047 <- tax_fea_sb_q$BR0047*sample_1stPCR[[4, 6]]
+tax_fea_sb_q$BR0048 <- tax_fea_sb_q$BR0048*sample_1stPCR[[5, 6]]
+
+tax_fea_sb_qfinal <- tax_fea_sb_q
+tax_fea_sb_q[tax_fea_sb_q < 0] <- 0
+View(tax_fea_sb_qfinal)
+tax_fea_sb_qfinal <- tax_fea_sb_qfinal[-c(1:6), ]
+sum(tax_fea_sb_qfinal$BR0041) # 1504334
+sum(tax_fea_sb_qfinal$BR0045) # 0
+sum(tax_fea_sb_qfinal$BR0046) # 1810870
+sum(tax_fea_sb_qfinal$BR0047) # 2184306
+sum(tax_fea_sb_qfinal$BR0048) # 1893751
